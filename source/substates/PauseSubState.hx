@@ -262,7 +262,6 @@ class PauseSubState extends MusicBeatSubstate
 					missingText.screenCenter(Y);
 					missingText.visible = true;
 					missingTextBG.visible = true;
-					FlxG.sound.play(Paths.sound('cancelMenu'), ClientPrefs.data.sfxVolume);
 					trace('ERROR! ${missingText.text}');
 
 					super.update(elapsed);
