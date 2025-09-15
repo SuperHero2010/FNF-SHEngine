@@ -1356,7 +1356,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 						if(selectedNotes.length == 1) onSelectNote();
 						forceDataUpdate = true;
 					}
-					else if(!holdingAlt && FlxG.mouse.y >= gridBg.y && FlxG.mouse.y < gridBg.y + gridBg.height) // Add note
+					else if(!holdingAlt && FlxG.mouse.y >= gridBg.y && FlxG.mouse.y < gridBg.y + gridBg.height)
 					{
 						var strumTime:Float = (diffY / GRID_SIZE * Conductor.stepCrochet / curZoom) + cachedSectionTimes[curSec];
 						if(noteData >= 0)
@@ -1465,7 +1465,6 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 			if(FlxG.mouse.x > gridBg.x && FlxG.mouse.x < gridBg.x + gridBg.width
 				&& FlxG.mouse.y > gridBg.y && FlxG.mouse.y < gridBg.y + gridBg.height)
 			{
-				var strumTime:Float = (diffY / GRID_SIZE * Conductor.stepCrochet / curZoom) + cachedSectionTimes[curSec];
 				if(noteData >= 0)
 				{
 					var noteSetupData:Array<Dynamic> = [strumTime, noteData, 0];
@@ -3459,15 +3458,15 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		{
 			stepperStackNum.value *= 2;
 		});
-		doubleSpamNum.color = FlxColor.GREEN;
-		doubleSpamNum.label.color = FlxColor.WHITE;
+		doubleSpamNum.bgColor = FlxColor.GREEN;
+		doubleSpamNum.label.textColor = FlxColor.WHITE;
 
 		var halfSpamNum:PsychUIButton = new PsychUIButton(doubleSpamNum.x + doubleSpamNum.width + 20, doubleSpamNum.y, 'x0.5 Amount', function()
 		{
 			stepperStackNum.value /= 2;
 		});
-		halfSpamNum.color = FlxColor.RED;
-		halfSpamNum.label.color = FlxColor.WHITE;
+		halfSpamNum.bgColor = FlxColor.RED;
+		halfSpamNum.label.textColor = FlxColor.WHITE;
 
 		stepperStackOffset = new PsychUINumericStepper(objX, objY + 80, 1, 1, 0, 999999, 4);
 		stepperStackOffset.name = 'stack_offset';
@@ -3476,15 +3475,15 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		{
 			stepperStackOffset.value *= 2;
 		});
-		doubleSpamMult.color = FlxColor.GREEN;
-		doubleSpamMult.label.color = FlxColor.WHITE;
+		doubleSpamMult.bgColor = FlxColor.GREEN;
+		doubleSpamMult.label.textColor = FlxColor.WHITE;
 
 		var halfSpamMult:PsychUIButton = new PsychUIButton(doubleSpamMult.x + doubleSpamMult.width + 20, doubleSpamMult.y, 'x0.5 SM', function()
 		{
 			stepperStackOffset.value /= 2;
 		});
-		halfSpamMult.color = FlxColor.RED;
-		halfSpamMult.label.color = FlxColor.WHITE;
+		halfSpamMult.bgColor = FlxColor.RED;
+		halfSpamMult.label.textColor = FlxColor.WHITE;
 
 		stepperStackSideOffset = new PsychUINumericStepper(objX, objY + 140, 1, 0, -9999, 9999);
 		stepperStackSideOffset.name = 'stack_sideways';
