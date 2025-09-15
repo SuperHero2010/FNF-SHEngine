@@ -1,12 +1,44 @@
 package states.editors;
 
 import flixel.FlxSubState;
+import flixel.FlxObject;
+import flixel.FlxSprite;
 import flixel.util.FlxSave;
 import flixel.util.FlxSort;
 import flixel.util.FlxSpriteUtil;
 import flixel.util.FlxStringUtil;
 import flixel.util.FlxDestroyUtil;
+import flixel.util.FlxTimer;
+import flixel.FlxG;
 import flixel.input.keyboard.FlxKey;
+import flixel.addons.display.FlxGridOverlay;
+import flixel.addons.transition.FlxTransitionableState;
+import flixel.addons.ui.FlxSlider;
+import flixel.group.FlxGroup.FlxTypedGroup;
+import flixel.group.FlxGroup;
+import flixel.group.FlxSpriteGroup;
+import flixel.input.keyboard.FlxKey;
+import flixel.math.FlxMath;
+import flixel.math.FlxPoint;
+import flixel.sound.FlxSound;
+import flixel.text.FlxText;
+import flixel.tweens.FlxEase;
+import flixel.tweens.FlxTween;
+import flixel.ui.FlxButton;
+import flixel.ui.FlxSpriteButton;
+import flixel.util.FlxColor;
+import flixel.util.FlxStringUtil;
+import flixel.util.FlxSort;
+
+import openfl.geom.Rectangle;
+import openfl.Lib;
+import openfl.events.Event;
+import openfl.events.IOErrorEvent;
+import openfl.media.Sound;
+import openfl.net.FileReference;
+import openfl.utils.Assets as OpenFlAssets;
+import openfl.utils.ByteArray;
+import openfl.events.UncaughtErrorEvent;
 
 import lime.utils.Assets;
 import lime.media.AudioBuffer;
@@ -17,6 +49,7 @@ import flash.geom.Rectangle;
 import haxe.Json;
 import haxe.Exception;
 import haxe.io.Bytes;
+import haxe.format.JsonParser;
 
 import states.editors.content.MetaNote;
 import states.editors.content.VSlice;
@@ -28,11 +61,18 @@ import backend.StageData;
 import backend.Highscore;
 import backend.Difficulty;
 
+import Section.SwagSection;
+import Song.SwagSong;
+
 import objects.Character;
 import objects.HealthIcon;
 import objects.Note;
 import objects.StrumNote;
 
+import sys.FileSystem;
+import sys.io.File;
+
+using StringTools;
 using DateTools;
 
 typedef UndoStruct = {
@@ -64,6 +104,9 @@ enum abstract WaveformTarget(String)
 	var OPPONENT = 'opp';
 }
 
+@:access(flixel.sound.FlxSound._sound)
+@:access(openfl.media.Sound.__buffer)
+
 class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychUIEvent
 {
 	public static final defaultEvents:Array<Array<String>> =
@@ -84,7 +127,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		['Change Character', "Value 1: Character to change (Dad, BF, GF)\nValue 2: New character's name"],
 		['Change Scroll Speed', "Value 1: Scroll Speed Multiplier (1 is default)\nValue 2: Time it takes to change fully in seconds."],
 		['Set Property', "Value 1: Variable name\nValue 2: New value"],
-		['Play Sound', "Value 1: Sound file name\nValue 2: Volume (Default: 1), ranges from 0 to 1"]
+		['Play Sound', "Value 1: Sound file name\nValue 2: Volume (Default: 1), ranges from 0 to 1"],
 	];
 	
 	public static var keysArray:Array<FlxKey> = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]; //Used for Vortex Editor
@@ -382,7 +425,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		infoBox.getTab('Information').menu.add(infoText);
 		add(infoBox);
 
-		mainBox = new PsychUIBox(mainBoxPosition.x, mainBoxPosition.y, 300, 280, ['Charting', 'Data', 'Events', 'Note', 'Section', 'Song']);
+		mainBox = new PsychUIBox(mainBoxPosition.x, mainBoxPosition.y, 300, 280, ['Charting', 'Data', 'Events', 'Note', 'Note Spamming', 'Section', 'Song']);
 		mainBox.selectedName = 'Song';
 		mainBox.scrollFactor.set();
 		mainBox.cameras = [camUI];
@@ -432,6 +475,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		addDataTab();
 		addEventsTab();
 		addNoteTab();
+		addNoteSpammingTab();
 		addSectionTab();
 		addSongTab();
 		
@@ -2753,6 +2797,167 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		tab_group.add(susLengthStepper);
 		tab_group.add(strumTimeStepper);
 		tab_group.add(noteTypeDropDown);
+	}
+
+	function addNoteSpammingTab()
+	{
+		var tab_group_stacking = new FlxUI(null, UI_box);
+		var tab_group = mainBox.getTab('Note Spamming').menu;
+
+		check_stackActive = new FlxUICheckBox(10, 10, null, null, "Enable Note Spamming", 100);
+		check_stackActive.name = 'check_stackActive';
+
+		stepperStackNum = new FlxUINumericStepper(10, 30, 1, 1, 0, 999999, 4);
+		stepperStackNum.name = 'stack_count';
+		blockPressWhileTypingOnStepper.push(stepperStackNum);
+
+		var doubleSpamNum:FlxButton = new FlxButton(stepperStackNum.x, stepperStackNum.y + 20, 'x2 Amount', function()
+		{
+			stepperStackNum.value *= 2;
+		});
+		doubleSpamNum.setGraphicSize(Std.int(doubleSpamNum.width), Std.int(doubleSpamNum.height));
+		doubleSpamNum.color = FlxColor.GREEN;
+		doubleSpamNum.label.color = FlxColor.WHITE;
+
+		var halfSpamNum:FlxButton = new FlxButton(doubleSpamNum.x + doubleSpamNum.width + 20, doubleSpamNum.y, 'x0.5 Amount', function()
+		{
+			stepperStackNum.value /= 2;
+		});
+		halfSpamNum.setGraphicSize(Std.int(halfSpamNum.width), Std.int(halfSpamNum.height));
+		halfSpamNum.color = FlxColor.RED;
+		halfSpamNum.label.color = FlxColor.WHITE;
+
+		stepperStackOffset = new FlxUINumericStepper(10, 80, 1, 1, 0, 999999, 4);
+		stepperStackOffset.name = 'stack_offset';
+		blockPressWhileTypingOnStepper.push(stepperStackOffset);
+
+		var doubleSpamMult:FlxButton = new FlxButton(stepperStackOffset.x, stepperStackOffset.y + 20, 'x2 SM', function()
+		{
+			stepperStackOffset.value *= 2;
+		});
+		doubleSpamMult.color = FlxColor.GREEN;
+		doubleSpamMult.label.color = FlxColor.WHITE;
+
+		var halfSpamMult:FlxButton = new FlxButton(doubleSpamMult.x + doubleSpamMult.width + 20, doubleSpamMult.y, 'x0.5 SM', function()
+		{
+			stepperStackOffset.value /= 2;
+		});
+		halfSpamMult.setGraphicSize(Std.int(halfSpamMult.width), Std.int(halfSpamMult.height));
+		halfSpamMult.color = FlxColor.RED;
+		halfSpamMult.label.color = FlxColor.WHITE;
+
+		stepperStackSideOffset = new FlxUINumericStepper(10, 140, 1, 0, -9999, 9999);
+		stepperStackSideOffset.name = 'stack_sideways';
+		blockPressWhileTypingOnStepper.push(stepperStackSideOffset);
+
+		stepperShrinkAmount = new FlxUINumericStepper(10, stepperStackSideOffset.y + 30, 1, 1, 0, 8192, 4);
+		stepperShrinkAmount.name = 'shrinker_amount';
+		blockPressWhileTypingOnStepper.push(stepperShrinkAmount);
+
+		var doubleShrinker:FlxButton = new FlxButton(stepperShrinkAmount.x, stepperShrinkAmount.y + 20, 'x2 SH', function()
+		{
+			stepperShrinkAmount.value *= 2;
+		});
+		doubleShrinker.color = FlxColor.GREEN;
+		doubleShrinker.label.color = FlxColor.WHITE;
+
+		var halfShrinker:FlxButton = new FlxButton(doubleShrinker.x + doubleShrinker.width + 20, doubleShrinker.y, 'x0.5 SH', function()
+		{
+			stepperShrinkAmount.value /= 2;
+		});
+		halfShrinker.setGraphicSize(Std.int(halfShrinker.width), Std.int(halfShrinker.height));
+		halfShrinker.color = FlxColor.RED;
+		halfShrinker.label.color = FlxColor.WHITE;
+
+		var shrinkNotesButton:FlxButton = new FlxButton(10, doubleShrinker.y + 30, "Stretch Notes", function()
+		{
+			var minimumTime:Float = sectionStartTime();
+			var sectionEndTime:Float = sectionStartTime(1);
+			for (i in 0..._song.notes[curSec].sectionNotes.length)
+			{
+				var note:Array<Dynamic> = _song.notes[curSec].sectionNotes[i];
+				if (note[2] > 0) note[2] *= stepperShrinkAmount.value;
+       				var originalStartTime:Float = note[0]; // Original start time (in seconds)
+				originalStartTime = originalStartTime - sectionStartTime();
+
+        			var stretchedStartTime:Float = originalStartTime * stepperShrinkAmount.value;
+
+        			var newStartTime:Float = sectionStartTime() + stretchedStartTime;
+
+       				note[0] = Math.max(newStartTime, minimumTime);
+				if (note[0] < minimumTime) note[0] = minimumTime;
+				_song.notes[curSec].sectionNotes[i] = note;
+			}
+			updateGrid(false);
+		});
+
+		var stepperShiftSteps:FlxUINumericStepper = new FlxUINumericStepper(10, shrinkNotesButton.y + 30, 1, 1, -8192, 8192, 4);
+		stepperShiftSteps.name = 'shifter_amount';
+		blockPressWhileTypingOnStepper.push(stepperShiftSteps);
+
+		var shiftNotesButton:FlxButton = new FlxButton(10, stepperShiftSteps.y + 20, "Shift Notes", function()
+		{
+			for (i in 0..._song.notes[curSec].sectionNotes.length)
+			{
+				_song.notes[curSec].sectionNotes[i][0] += (stepperShiftSteps.value) * (15000/Conductor.bpm);
+			}
+			updateGrid(false);
+		});
+		shiftNotesButton.setGraphicSize(Std.int(shiftNotesButton.width), Std.int(shiftNotesButton.height));
+
+		//ok im adding way too many spamcharting features LOL
+
+		var stepperDuplicateAmount:FlxUINumericStepper = new FlxUINumericStepper(10, shiftNotesButton.y + 30, 1, 1, 0, 32, 4);
+		stepperDuplicateAmount.name = 'duplicater_amount';
+		blockPressWhileTypingOnStepper.push(stepperDuplicateAmount);
+
+		var dupeNotesButton:FlxButton = new FlxButton(10, stepperDuplicateAmount.y + 20, "Duplicate Notes", function()
+		{
+			var copiedNotes:Array<Dynamic> = [];
+			for (i in 0..._song.notes[curSec].sectionNotes.length)
+			{
+				var note:Array<Dynamic> = _song.notes[curSec].sectionNotes[i];
+				copiedNotes.push(note);
+			}
+			for (_i in 1...Std.int(stepperDuplicateAmount.value)+1)
+			{
+				for (i in 0...copiedNotes.length)
+				{
+					final copiedNote:Array<Dynamic> = [copiedNotes[i][0], copiedNotes[i][1], copiedNotes[i][2], copiedNotes[i][3]];
+					copiedNote[0] += (stepperShiftSteps.value * _i) * (15000/Conductor.bpm);
+					//yeah.. unfortunately this relies on the value of the Shift Notes stepper.. stupid but it works, so im gonna keep it this way until i find a better solution
+					_song.notes[curSec].sectionNotes.push(copiedNote);
+				}
+			}
+			_song.notes[curSec].sectionNotes.length <= 30000 ? updateGrid(false) : changeSection(curSec + 1); //if there's now more than 30,000 notes in the same section then uh.. change to the next section so you don't suffer a crash
+		});
+		dupeNotesButton.setGraphicSize(Std.int(dupeNotesButton.width), Std.int(dupeNotesButton.height));
+
+		tab_group_stacking.add(check_stackActive);
+		tab_group_stacking.add(stepperStackNum);
+		tab_group_stacking.add(stepperStackOffset);
+		tab_group_stacking.add(stepperStackSideOffset);
+		tab_group_stacking.add(stepperShrinkAmount);
+		tab_group_stacking.add(stepperShiftSteps);
+		tab_group_stacking.add(stepperDuplicateAmount);
+		tab_group_stacking.add(doubleSpamNum);
+		tab_group_stacking.add(halfSpamNum);
+		tab_group_stacking.add(doubleSpamMult);
+		tab_group_stacking.add(halfSpamMult);
+		tab_group_stacking.add(doubleShrinker);
+		tab_group_stacking.add(halfShrinker);
+		tab_group_stacking.add(shrinkNotesButton);
+		tab_group_stacking.add(shiftNotesButton);
+		tab_group_stacking.add(dupeNotesButton);
+		
+		tab_group_stacking.add(new FlxText(100, 30, 0, "Spam Count"));
+		tab_group_stacking.add(new FlxText(100, 80, 0, "Spam Multiplier"));
+		tab_group_stacking.add(new FlxText(100, 140, 0, "Spam Scroll Amount"));
+		tab_group_stacking.add(new FlxText(100, stepperShrinkAmount.y, 0, "Stretch Amount"));
+		tab_group_stacking.add(new FlxText(100, stepperShiftSteps.y, 0, "Steps to Shift By"));
+		tab_group_stacking.add(new FlxText(100, stepperDuplicateAmount.y, 0, "Amount of Duplicates"));
+
+		UI_box.addGroup(tab_group_stacking);
 	}
 
 	var mustHitCheckBox:PsychUICheckBox;
