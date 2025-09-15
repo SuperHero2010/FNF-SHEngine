@@ -411,6 +411,13 @@ class FreeplayState extends MusicBeatState
 
 			try
 			{
+				// Memory management for crash prevention
+				if (ClientPrefs.data.disableGC) {
+					MemoryUtil.enable();
+					MemoryUtil.collect(true);
+					MemoryUtil.disable();
+				}
+
 				Song.loadFromJson(poop, songLowercase);
 				PlayState.isStoryMode = false;
 				PlayState.storyDifficulty = curDifficulty;
@@ -419,6 +426,12 @@ class FreeplayState extends MusicBeatState
 			}
 			catch(e:haxe.Exception)
 			{
+				// Memory management for crash prevention
+				if (ClientPrefs.data.disableGC) {
+					MemoryUtil.enable();
+					MemoryUtil.collect(true);
+				}
+
 				trace('ERROR! ${e.message}');
 
 				var errorStr:String = e.message;
@@ -429,7 +442,8 @@ class FreeplayState extends MusicBeatState
 				missingText.screenCenter(Y);
 				missingText.visible = true;
 				missingTextBG.visible = true;
-				FlxG.sound.play(Paths.sound('cancelMenu'));
+				FlxG.sound.play(Paths.sound('cancelMenu'), ClientPrefs.data.sfxVolume);
+				trace('ERROR! ${missingText.text}');
 
 				updateTexts(elapsed);
 				super.update(elapsed);
