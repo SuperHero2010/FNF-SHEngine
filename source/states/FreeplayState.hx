@@ -442,7 +442,6 @@ class FreeplayState extends MusicBeatState
 				missingText.screenCenter(Y);
 				missingText.visible = true;
 				missingTextBG.visible = true;
-				FlxG.sound.play(Paths.sound('cancelMenu'), ClientPrefs.data.sfxVolume);
 				trace('ERROR! ${missingText.text}');
 
 				updateTexts(elapsed);
