@@ -1465,7 +1465,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 			if(FlxG.mouse.x > gridBg.x && FlxG.mouse.x < gridBg.x + gridBg.width
 				&& FlxG.mouse.y > gridBg.y && FlxG.mouse.y < gridBg.y + gridBg.height)
 			{
-				if(noteData >= 0)
+				if(note.noteData >= 0)
 				{
 					var noteSetupData:Array<Dynamic> = [strumTime, noteData, 0];
 					var typeSelected:String = noteTypes[noteTypeDropDown.selectedIndex].trim();
@@ -3154,7 +3154,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 			}
 		});
 		jumpSectionButton.color = FlxColor.CYAN;
-		jumpSectionButton.label.color = FlxColor.WHITE;
+		jumpSectionButton.normalStyle.textColor = FlxColor.WHITE;
 
 		tab_group.add(stepperSectionJump);
 		tab_group.add(jumpSectionButton);
