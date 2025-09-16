@@ -64,8 +64,8 @@ class SongJson {
 	var save:Int = 0;
 
 	var bracketMode:Int = 0; // 0, 1 = inside notes, 2 = exit notes
-	var b_p:Vector<Null<Int>> = new Vector<Null<Int>>(4, null); // it's for "[", "]", "{", "}".
-	var b_s:Vector<Null<Int>> = new Vector<Null<Int>>(4, null); // it's for "[", "]", "{", "}".
+	var b_p:Array<Null<Int>> = [null, null, null, null]; // it's for "[", "]", "{", "}".
+	var b_s:Array<Null<Int>> = [null, null, null, null]; // it's for "[", "]", "{", "}".
 	final skipPattern:String = "[]{}";
 
 	var objLayer:Int = -1;
