@@ -65,6 +65,7 @@ jobs:
         run: |
           haxelib setup C:/haxelib
           haxelib install hxcpp > /dev/null --quiet
+          haxelib set hxcpp 4.2.1
           haxelib install flixel-addons 3.2.2
           .\"setup/windows.bat"
         shell: cmd
