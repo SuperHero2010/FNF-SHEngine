@@ -59,21 +59,16 @@ jobs:
 
       - uses: krdlab/setup-haxe@master
         with:
-          haxe-version: 4.2.5
+          haxe-version: 4.3.0
           haxelib-version: 'latest'
       # Runs a set of commands using the runners shell
       - name: Install Haxelib
         run: |
           haxelib setup C:/haxelib
           haxelib install hxcpp > /dev/null --quiet
-          haxelib remove hxcpp
-          haxelib install hxcpp 4.2.1
-          haxelib set hxcpp 4.2.1
           haxelib install flixel-addons 3.2.2
           echo "HAXELIB_PATH=$HOME/haxe/lib" >> $env:GITHUB_ENV
           .\"setup/windows.bat"
-          haxelib remove flxanimate
-          haxelib git flxanimate https://github.com/ShadowMario/flxanimate.git v1.1.0
         shell: cmd
       - name: Skip SScript setup mode
         run: echo 'oy9:showMacroty8:loopCosti25y10:includeAllfg' >> %USERPROFILE%/settings.cocoa
