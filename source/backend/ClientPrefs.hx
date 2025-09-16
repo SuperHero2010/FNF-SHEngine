@@ -21,7 +21,7 @@ import states.TitleState;
 	public var lowQuality:Bool = false;
 	public var shaders:Bool = true;
 	public var cacheOnGPU:Bool = #if !switch false #else true #end; // GPU Caching made by Raltyro
-	public var disableGC:Bool = false; // Disable Garbage Collector for better performance during chart loading/playing
+	public var disableGC:Bool = true; // Disable Garbage Collector for better performance during chart loading/playing
 	
 	// H-Slice Performance Optimizations
 	public var betterRecycle:Bool = true; // Use NoteGroup's recycle system for better performance
@@ -91,7 +91,7 @@ import states.TitleState;
 	public var goodWindow:Float = 90.0;
 	public var badWindow:Float = 135.0;
 	public var safeFrames:Float = 10.0;
-	public var guitarHeroSustains:Bool = true;
+	public var guitarHeroSustains:Bool = false;
 	public var discordRPC:Bool = true;
 	public var loadingScreen:Bool = true;
 	public var language:String = 'en-US';
