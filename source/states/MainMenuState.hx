@@ -95,7 +95,11 @@ class MainMenuState extends MusicBeatState
 			rightItem.x -= rightItem.width;
 		}
 
-		var zsVer:FlxText = new FlxText(12, FlxG.height - 44, 0, "ZS Engine v" + psychEngineZSVersion, 12);
+		var zsVer:FlxText = new FlxText(12, FlxG.height - 64, 0, "ZS Engine v" + psychEngineZSVersion, 12);
+		zsVer.scrollFactor.set();
+		zsVer.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		add(zsVer);
+		
 		var psychVer:FlxText = new FlxText(12, FlxG.height - 44, 0, "Psych Engine v" + psychEngineVersion, 12);
 		psychVer.scrollFactor.set();
 		psychVer.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
