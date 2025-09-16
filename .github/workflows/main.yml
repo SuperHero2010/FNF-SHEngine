@@ -64,9 +64,10 @@ jobs:
       # Runs a set of commands using the runners shell
       - name: Install Haxelib
         run: |
-          haxelib remove hxcpp
           haxelib setup C:/haxelib
           haxelib install hxcpp > /dev/null --quiet
+          haxelib remove hxcpp
+          haxelib install hxcpp 4.2.1
           haxelib set hxcpp 4.2.1
           haxelib install flixel-addons 3.2.2
           echo "HAXELIB_PATH=$HOME/haxe/lib" >> $env:GITHUB_ENV
