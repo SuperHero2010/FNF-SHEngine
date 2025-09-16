@@ -178,7 +178,7 @@ class SongJson {
 						
 						skipMode = true;
 						#if debug trace('skipMode activated at $pos'); #end
-						continue;
+						return parseRec();
 					}
 					arr[++arrLayer] = [];
 					comma = null;
@@ -308,7 +308,7 @@ class SongJson {
 		pos--; // rewind
 		var end = Math.min(pos + 20, str.length);
 		var start = Math.max(0, pos - 20);
-		var excerpt = str.substr(start, end - start);
+		var excerpt = str.substr(Std.int(start), Std.int(end - start));
 		throw 'Invalid char ' + String.fromCharCode(c) + ' at position $pos in \'$excerpt\'';
 	}
 
