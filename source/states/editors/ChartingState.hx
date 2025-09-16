@@ -1359,7 +1359,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 					else if(!holdingAlt && FlxG.mouse.y >= gridBg.y && FlxG.mouse.y < gridBg.y + gridBg.height)
 					{
 						var strumTime:Float = (diffY / GRID_SIZE * Conductor.stepCrochet / curZoom) + cachedSectionTimes[curSec];
-						if(note.noteData >= 0)
+						if(noteData >= 0)
 						{
 							trace('Added note at time: $strumTime');
 							var didAdd:Bool = false;
@@ -1465,7 +1465,14 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 			if(FlxG.mouse.x > gridBg.x && FlxG.mouse.x < gridBg.x + gridBg.width
 				&& FlxG.mouse.y > gridBg.y && FlxG.mouse.y < gridBg.y + gridBg.height)
 			{
-				if(note.noteData >= 0)
+				var diffX:Float = FlxG.mouse.x - gridBg.x;
+				var diffY:Float = FlxG.mouse.y - gridBg.y;
+				var noteData:Int = Math.floor(diffX / GRID_SIZE);
+				if(SHOW_EVENT_COLUMN)
+					noteData--;
+				var strumTime:Float = (diffY / GRID_SIZE * Conductor.stepCrochet / curZoom) + cachedSectionTimes[curSec];
+				
+				if(noteData >= 0)
 				{
 					var noteSetupData:Array<Dynamic> = [strumTime, noteData, 0];
 					var typeSelected:String = noteTypes[noteTypeDropDown.selectedIndex].trim();
