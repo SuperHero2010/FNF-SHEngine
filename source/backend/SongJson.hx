@@ -45,7 +45,9 @@ class SongJson {
 
 	function doParse():Dynamic {
 		var result = parseRec();
-		if (Main.isConsoleAvailable && log) Sys.stdout().writeString('\x1b[0G$pos/${str.length}');
+		#if sys
+	if (log) Sys.stdout().writeString('\x1b[0G$pos/${str.length}');
+	#end
 		while (!StringTools.isEof(c = nextChar())) {
 			switch (c) {
 				case ' '.code, '\r'.code, '\n'.code, '\t'.code:
@@ -77,58 +79,59 @@ class SongJson {
 	var returnObject:Array<Dynamic> = [];
 
 	function parseRec():Dynamic {
+		if(obj[objLayer + 1] != null) obj[objLayer + 1] == null;
+		if(arr[arrLayer + 1] != null) arr[arrLayer + 1] == null;
+		c = nextChar();
 		
-			if(obj[objLayer + 1] != null) obj[objLayer + 1] == null;
-			if(arr[arrLayer + 1] != null) arr[arrLayer + 1] == null;
-			c = nextChar();
-			if (skipMode) {
-				showProgress();
+		if (skipMode) {
+			showProgress();
 
-				for (i in 0...b_s.length) {
-					b_p[i] = b_s[i] ?? str.indexOf(skipPattern.charAt(i), pos - 1);
-					b_s[i] = str.indexOf(skipPattern.charAt(i), pos);
-					if (b_s[i] == -1) b_s[i] = null;
-				}
-
-				if (b_s[2] < b_s[3]) {
-					bracketMode = 0; // "{" < "}"
-					if (b_s[1] < b_s[2]) bracketMode = 2; // "]" < "{"
-				}
-				else if (b_s[2] == null || b_s[3] < b_s[2]) {
-					bracketMode = 1; // found '{' && "}" < "{"
-					if (b_s[2] == null) {
-						if (b_p[3] < b_s[1]) bracketMode = 2; // old "}" < new "]"
-					} 
-				}
-				
-				if (b_s[1] != null && (b_s[2] != null || b_s[3] != null)) {
-					switch (bracketMode) {
-						case 0, 1:
-							pos = FlxMath.minInt(b_s[2] ?? b_s[3] ?? pos, b_s[3] ?? b_s[2] ?? pos);
-						case 2:
-							pos = b_s[1] ?? pos;
-					} // lmao
-				} // else pos = FlxMath.maxInt(FlxMath.maxInt(FlxMath.maxInt(b_s[0] ?? pos, b_s[1] ?? pos), b_s[2] ?? pos), b_s[3] ?? pos);
-				c = nextChar(); --pos;
-				// trace(b_s[0].hex(8), b_s[1].hex(8), b_s[2].hex(8), b_s[3].hex(8), pos.hex(8), bracketMode, String.fromCharCode(c));
-				
-				if (bracketMode == 2) {
-					prepareSkipMode = skipMode = false; ++pos; comma = true;
-					#if debug trace('skipMode deactivated at $pos, $field'); #end
-					skipDone = true;
-				}
-				
-				if (pos > str.length) {
-					prepareSkipMode = skipMode = false;
-				} // emergency stop
-
-				skipDone ? return [] : continue;
+			for (i in 0...b_s.length) {
+				b_p[i] = b_s[i] ?? str.indexOf(skipPattern.charAt(i), pos - 1);
+				b_s[i] = str.indexOf(skipPattern.charAt(i), pos);
+				if (b_s[i] == -1) b_s[i] = null;
 			}
 
-			switch (c) {
-				case ' '.code, '\r'.code, '\n'.code, '\t'.code:
-				// loop
-				case '{'.code:
+			if (b_s[2] < b_s[3]) {
+				bracketMode = 0; // "{" < "}"
+				if (b_s[1] < b_s[2]) bracketMode = 2; // "]" < "{"
+			}
+			else if (b_s[2] == null || b_s[3] < b_s[2]) {
+				bracketMode = 1; // found '{' && "}" < "{"
+				if (b_s[2] == null) {
+					if (b_p[3] < b_s[1]) bracketMode = 2; // old "}" < new "]"
+				} 
+			}
+			
+			if (b_s[1] != null && (b_s[2] != null || b_s[3] != null)) {
+				switch (bracketMode) {
+					case 0, 1:
+						pos = FlxMath.minInt(b_s[2] ?? b_s[3] ?? pos, b_s[3] ?? b_s[2] ?? pos);
+					case 2:
+						pos = b_s[1] ?? pos;
+				} // lmao
+			} // else pos = FlxMath.maxInt(FlxMath.maxInt(FlxMath.maxInt(b_s[0] ?? pos, b_s[1] ?? pos), b_s[2] ?? pos), b_s[3] ?? pos);
+			c = nextChar(); --pos;
+			// trace(b_s[0].hex(8), b_s[1].hex(8), b_s[2].hex(8), b_s[3].hex(8), pos.hex(8), bracketMode, String.fromCharCode(c));
+			
+			if (bracketMode == 2) {
+				prepareSkipMode = skipMode = false; ++pos; comma = true;
+				#if debug trace('skipMode deactivated at $pos, $field'); #end
+				skipDone = true;
+			}
+			
+			if (pos > str.length) {
+				prepareSkipMode = skipMode = false;
+			} // emergency stop
+
+			if (skipDone) return [];
+			return parseRec(); // Recursive call instead of continue
+		}
+
+		switch (c) {
+			case ' '.code, '\r'.code, '\n'.code, '\t'.code:
+			// loop
+			case '{'.code:
 					obj[++objLayer] = {};
 					field = null;
 					comma = null;
@@ -220,6 +223,7 @@ class SongJson {
 					}
 					invalidChar();
 			}
+		return null; // This should never be reached, but needed for compilation
 	}
 
 	function parseString():String {
@@ -303,14 +307,17 @@ class SongJson {
 	function invalidChar() {
 		pos--; // rewind
 		var end = Math.min(pos + 20, str.length);
-		var excerpt = str.substr(Math.max(0, pos - 20), end - Math.max(0, pos - 20));
+		var start = Math.max(0, pos - 20);
+		var excerpt = str.substr(start, end - start);
 		throw 'Invalid char ' + String.fromCharCode(c) + ' at position $pos in \'$excerpt\'';
 	}
 
 	function showProgress() {
-		if (Main.isConsoleAvailable && log && pos % 10000 == 0) {
+		#if sys
+		if (log && pos % 10000 == 0) {
 			var progress = Math.floor((pos / str.length) * 100);
 			Sys.stdout().writeString('\x1b[0G$progress% ($pos/${str.length})');
 		}
+		#end
 	}
 }
