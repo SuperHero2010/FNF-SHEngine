@@ -59,7 +59,7 @@ jobs:
 
       - uses: krdlab/setup-haxe@master
         with:
-          haxe-version: 4.3.2
+          haxe-version: 4.3.4
       # Runs a set of commands using the runners shell
       - name: Install Haxelib
         run: |
@@ -68,6 +68,11 @@ jobs:
           haxelib set hxcpp 4.2.1
           haxelib install flixel-addons 3.2.2
           .\"setup/windows.bat"
+          echo y | haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git
+          cd $HAXELIB_PATH/hxcpp/git/tools/hxcpp
+          haxe compile.hxml
+          cd ../project
+          neko build.n
         shell: cmd
       - name: Skip SScript setup mode
         run: echo 'oy9:showMacroty8:loopCosti25y10:includeAllfg' >> %USERPROFILE%/settings.cocoa
