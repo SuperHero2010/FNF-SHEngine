@@ -1670,6 +1670,7 @@ class PlayState extends MusicBeatState
 	var canPause:Bool = true;
 	var freezeCamera:Bool = false;
 	var allowDebugKeys:Bool = true;
+	var frameCount:Int = 0;
 
 	override public function update(elapsed:Float)
 	{
@@ -1699,6 +1700,7 @@ class PlayState extends MusicBeatState
   			if (ClientPrefs.data.disableGC) MemoryUtil.disable();
   			#end
 		}
+		
 		super.update(elapsed);
 
 		setOnScripts('curDecStep', curDecStep);
