@@ -418,7 +418,7 @@ class FreeplayState extends MusicBeatState
 					MemoryUtil.disable();
 				}
 
-				Song.loadFromJson(poop, true, songLowercase);
+				Song.loadFromJson(poop, false, songLowercase);
 				PlayState.isStoryMode = false;
 				PlayState.storyDifficulty = curDifficulty;
 
