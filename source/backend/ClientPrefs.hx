@@ -22,6 +22,23 @@ import states.TitleState;
 	public var shaders:Bool = true;
 	public var cacheOnGPU:Bool = #if !switch false #else true #end; // GPU Caching made by Raltyro
 	public var disableGC:Bool = false; // Disable Garbage Collector for better performance during chart loading/playing
+	
+	// H-Slice Performance Optimizations
+	public var betterRecycle:Bool = true; // Use NoteGroup's recycle system for better performance
+	public var limitNotes:Int = 0; // Max notes shown (0 = unlimited)
+	public var cacheNotes:Int = 0; // Pre-cache note instances (0 = disabled)
+	public var skipSpawnNote:Bool = true; // Skip processing for spawned notes
+	public var processFirst:Bool = true; // Process notes before spawning
+	public var optimizeSpawnNote:Bool = true; // Optimize hit processing at spawn time
+	public var noteHitPreEvent:Bool = true; // Send noteHitPreEvent on Lua/HScript
+	public var noteHitEvent:Bool = true; // Send noteHitEvent on Lua/HScript
+	public var skipNoteEvent:Bool = true; // Send hit events for skipped notes
+	public var spawnNoteEvent:Bool = true; // Send spawn events for spawned notes
+	
+	// Advanced GC Control
+	public var gcRate:Int = 0; // GC run rate (0 = disabled)
+	public var gcMain:Bool = false; // Run major garbage collection
+	
 	public var framerate:Int = 60;
 	public var camZooms:Bool = true;
 	public var hideHud:Bool = false;

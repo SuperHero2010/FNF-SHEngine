@@ -2,6 +2,7 @@ package backend;
 
 import haxe.Json;
 import lime.utils.Assets;
+import backend.SongJson;
 
 import objects.Note;
 
@@ -121,8 +122,9 @@ class Song
 
 	public static var chartPath:String;
 	public static var loadedSongName:String;
-	public static function loadFromJson(jsonInput:String, ?folder:String):SwagSong
+	public static function loadFromJson(jsonInput:String, forPlay:Bool = false, ?folder:String):SwagSong
 	{
+		SongJson.skipChart = forPlay;
 		if(folder == null) folder = jsonInput;
 		PlayState.SONG = getChart(jsonInput, folder);
 		loadedSongName = folder;
@@ -157,7 +159,7 @@ class Song
 
 	public static function parseJSON(rawData:String, ?nameForError:String = null, ?convertTo:String = 'psych_v1'):SwagSong
 	{
-		var songJson:SwagSong = cast Json.parse(rawData);
+		var songJson:SwagSong = cast SongJson.parse(rawData);
 		if(Reflect.hasField(songJson, 'song'))
 		{
 			var subSong:SwagSong = Reflect.field(songJson, 'song');
