@@ -1392,11 +1392,18 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 								var addCount:Float = stepperStackNum.value * stepperStackOffset.value - 1;
 								for(i in 0...Std.int(addCount)) {
 									var spamStrumTime:Float = strumTime + (15000/Conductor.bpm)/stepperStackOffset.value * (i + 1);
-									var spamNoteData:Int = noteData + Math.floor(stepperStackSideOffset.value);
 									
-									// Clamp note data to valid range
+									// Determine which player the original note belongs to and maintain that assignment
+									var originalPlayer:Int = Math.floor(noteData / GRID_COLUMNS_PER_PLAYER);
+									var originalNoteData:Int = noteData % GRID_COLUMNS_PER_PLAYER;
+									var spamNoteData:Int = originalNoteData + Math.floor(stepperStackSideOffset.value);
+									
+									// Clamp note data to valid range within the player's columns
 									if(spamNoteData < 0) spamNoteData = 0;
-									if(spamNoteData > 3) spamNoteData = 3;
+									if(spamNoteData >= GRID_COLUMNS_PER_PLAYER) spamNoteData = GRID_COLUMNS_PER_PLAYER - 1;
+									
+									// Add the player offset back to maintain the correct player assignment
+									spamNoteData += originalPlayer * GRID_COLUMNS_PER_PLAYER;
 									
 									var spamNoteSetupData:Array<Dynamic> = [spamStrumTime, spamNoteData, 0];
 									if(typeSelected != null && typeSelected.length > 0)
@@ -1497,16 +1504,23 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 					selectedNotes.push(noteAdded);
 					addUndoAction(ADD_NOTE, {notes: [noteAdded]});
 
-					// Note Spamming feature for C key drawing
-					if (check_stackActive.checked) {
-						var addCount:Float = stepperStackNum.value * stepperStackOffset.value - 1;
-						for(i in 0...Std.int(addCount)) {
-							var spamStrumTime:Float = strumTime + (15000/Conductor.bpm)/stepperStackOffset.value * (i + 1);
-							var spamNoteData:Int = noteData + Math.floor(stepperStackSideOffset.value);
-							
-							// Clamp note data to valid range
-							if(spamNoteData < 0) spamNoteData = 0;
-							if(spamNoteData > 3) spamNoteData = 3;
+						// Note Spamming feature for C key drawing
+						if (check_stackActive.checked) {
+							var addCount:Float = stepperStackNum.value * stepperStackOffset.value - 1;
+							for(i in 0...Std.int(addCount)) {
+								var spamStrumTime:Float = strumTime + (15000/Conductor.bpm)/stepperStackOffset.value * (i + 1);
+								
+								// Determine which player the original note belongs to and maintain that assignment
+								var originalPlayer:Int = Math.floor(noteData / GRID_COLUMNS_PER_PLAYER);
+								var originalNoteData:Int = noteData % GRID_COLUMNS_PER_PLAYER;
+								var spamNoteData:Int = originalNoteData + Math.floor(stepperStackSideOffset.value);
+								
+								// Clamp note data to valid range within the player's columns
+								if(spamNoteData < 0) spamNoteData = 0;
+								if(spamNoteData >= GRID_COLUMNS_PER_PLAYER) spamNoteData = GRID_COLUMNS_PER_PLAYER - 1;
+								
+								// Add the player offset back to maintain the correct player assignment
+								spamNoteData += originalPlayer * GRID_COLUMNS_PER_PLAYER;
 							
 							var spamNoteSetupData:Array<Dynamic> = [spamStrumTime, spamNoteData, 0];
 							if(typeSelected != null && typeSelected.length > 0)
@@ -3160,7 +3174,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 				showOutput('Invalid section number! Must be between 0 and ${PlayState.SONG.notes.length - 1}', true);
 			}
 		});
-		jumpSectionButton.normalStyle.bgColor = FlxColor.CYAN;
+		jumpSectionButton.color = FlxColor.CYAN;
 		jumpSectionButton.normalStyle.textColor = FlxColor.WHITE;
 
 		tab_group.add(stepperSectionJump);
@@ -3465,14 +3479,14 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		{
 			stepperStackNum.value *= 2;
 		});
-		doubleSpamNum.normalStyle.bgColor = FlxColor.GREEN;
+		doubleSpamNum.color = FlxColor.GREEN;
 		doubleSpamNum.normalStyle.textColor = FlxColor.WHITE;
 
 		var halfSpamNum:PsychUIButton = new PsychUIButton(doubleSpamNum.x + doubleSpamNum.width + 20, doubleSpamNum.y, 'x0.5 Amount', function()
 		{
 			stepperStackNum.value /= 2;
 		});
-		halfSpamNum.normalStyle.bgColor = FlxColor.RED;
+		halfSpamNum.color = FlxColor.RED;
 		halfSpamNum.normalStyle.textColor = FlxColor.WHITE;
 
 		stepperStackOffset = new PsychUINumericStepper(objX, objY + 80, 1, 1, 0, 999999, 4);
@@ -3482,14 +3496,14 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		{
 			stepperStackOffset.value *= 2;
 		});
-		doubleSpamMult.normalStyle.bgColor = FlxColor.GREEN;
+		doubleSpamMult.color = FlxColor.GREEN;
 		doubleSpamMult.normalStyle.textColor = FlxColor.WHITE;
 
 		var halfSpamMult:PsychUIButton = new PsychUIButton(doubleSpamMult.x + doubleSpamMult.width + 20, doubleSpamMult.y, 'x0.5 SM', function()
 		{
 			stepperStackOffset.value /= 2;
 		});
-		halfSpamMult.normalStyle.bgColor = FlxColor.RED;
+		halfSpamMult.color = FlxColor.RED;
 		halfSpamMult.normalStyle.textColor = FlxColor.WHITE;
 
 		stepperStackSideOffset = new PsychUINumericStepper(objX, objY + 140, 1, 0, -9999, 9999);
