@@ -1,16 +1,39 @@
+// Original code is haxe.format.JsonParser.hx
+
+/* 
+ * Copyright (C)2005-2019 Haxe Foundation
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
+
 package backend;
 
-import flixel.math.FlxMath;
 import haxe.Timer;
-import Main;
+import haxe.ds.Vector;
 
 /**
-	Custom JSON parser optimized for chart loading with note skipping capability.
-	
-	This parser can skip parsing the entire "notes" array when loading charts for gameplay,
-	significantly improving loading times for high note count charts (500K-1M notes).
-	
-	Based on H-Slice's implementation for handling massive charts efficiently.
+	An implementation of JSON parser in Haxe.
+
+	This class is used by `haxe.Json` when native JSON implementation
+	is not available.
+
+	@see https://haxe.org/manual/std-Json-parsing.html
 **/
 class SongJson {
 	/**
@@ -45,9 +68,7 @@ class SongJson {
 
 	function doParse():Dynamic {
 		var result = parseRec();
-		#if sys
-	if (log) Sys.stdout().writeString('\x1b[0G$pos/${str.length}');
-	#end
+		if (Main.isConsoleAvailable && log) Sys.stdout().writeString('\x1b[0G$pos/${str.length}');
 		while (!StringTools.isEof(c = nextChar())) {
 			switch (c) {
 				case ' '.code, '\r'.code, '\n'.code, '\t'.code:
@@ -66,8 +87,8 @@ class SongJson {
 	var save:Int = 0;
 
 	var bracketMode:Int = 0; // 0, 1 = inside notes, 2 = exit notes
-	var b_p:Array<Null<Int>> = [null, null, null, null]; // it's for "[", "]", "{", "}".
-	var b_s:Array<Null<Int>> = [null, null, null, null]; // it's for "[", "]", "{", "}".
+	var b_p:Vector<Null<Int>> = new Vector<Null<Int>>(4, null); // it's for "[", "]", "{", "}".
+	var b_s:Vector<Null<Int>> = new Vector<Null<Int>>(4, null); // it's for "[", "]", "{", "}".
 	final skipPattern:String = "[]{}";
 
 	var objLayer:Int = -1;
@@ -79,59 +100,58 @@ class SongJson {
 	var returnObject:Array<Dynamic> = [];
 
 	function parseRec():Dynamic {
-		if(obj[objLayer + 1] != null) obj[objLayer + 1] == null;
-		if(arr[arrLayer + 1] != null) arr[arrLayer + 1] == null;
-		c = nextChar();
-		
-		if (skipMode) {
-			showProgress();
+		while (true) {
+			if(obj[objLayer + 1] != null) obj[objLayer + 1] == null;
+			if(arr[arrLayer + 1] != null) arr[arrLayer + 1] == null;
+			c = nextChar();
+			if (skipMode) {
+				showProgress();
 
-			for (i in 0...b_s.length) {
-				b_p[i] = b_s[i] ?? str.indexOf(skipPattern.charAt(i), pos - 1);
-				b_s[i] = str.indexOf(skipPattern.charAt(i), pos);
-				if (b_s[i] == -1) b_s[i] = null;
+				for (i in 0...b_s.length) {
+					b_p[i] = b_s[i] ?? str.indexOf(skipPattern.charAt(i), pos - 1);
+					b_s[i] = str.indexOf(skipPattern.charAt(i), pos);
+					if (b_s[i] == -1) b_s[i] = null;
+				}
+
+				if (b_s[2] < b_s[3]) {
+					bracketMode = 0; // "{" < "}"
+					if (b_s[1] < b_s[2]) bracketMode = 2; // "]" < "{"
+				}
+				else if (b_s[2] == null || b_s[3] < b_s[2]) {
+					bracketMode = 1; // found '{' && "}" < "{"
+					if (b_s[2] == null) {
+						if (b_p[3] < b_s[1]) bracketMode = 2; // old "}" < new "]"
+					} 
+				}
+				
+				if (b_s[1] != null && (b_s[2] != null || b_s[3] != null)) {
+					switch (bracketMode) {
+						case 0, 1:
+							pos = FlxMath.minInt(b_s[2] ?? b_s[3] ?? pos, b_s[3] ?? b_s[2] ?? pos);
+						case 2:
+							pos = b_s[1] ?? pos;
+					} // lmao
+				} // else pos = FlxMath.maxInt(FlxMath.maxInt(FlxMath.maxInt(b_s[0] ?? pos, b_s[1] ?? pos), b_s[2] ?? pos), b_s[3] ?? pos);
+				c = nextChar(); --pos;
+				// trace(b_s[0].hex(8), b_s[1].hex(8), b_s[2].hex(8), b_s[3].hex(8), pos.hex(8), bracketMode, String.fromCharCode(c));
+				
+				if (bracketMode == 2) {
+					prepareSkipMode = skipMode = false; ++pos; comma = true;
+					#if debug trace('skipMode deactivated at $pos, $field'); #end
+					skipDone = true;
+				}
+				
+				if (pos > str.length) {
+					prepareSkipMode = skipMode = false;
+				} // emergency stop
+
+				skipDone ? return [] : continue;
 			}
 
-			if (b_s[2] < b_s[3]) {
-				bracketMode = 0; // "{" < "}"
-				if (b_s[1] < b_s[2]) bracketMode = 2; // "]" < "{"
-			}
-			else if (b_s[2] == null || b_s[3] < b_s[2]) {
-				bracketMode = 1; // found '{' && "}" < "{"
-				if (b_s[2] == null) {
-					if (b_p[3] < b_s[1]) bracketMode = 2; // old "}" < new "]"
-				} 
-			}
-			
-			if (b_s[1] != null && (b_s[2] != null || b_s[3] != null)) {
-				switch (bracketMode) {
-					case 0, 1:
-						pos = FlxMath.minInt(b_s[2] ?? b_s[3] ?? pos, b_s[3] ?? b_s[2] ?? pos);
-					case 2:
-						pos = b_s[1] ?? pos;
-				} // lmao
-			} // else pos = FlxMath.maxInt(FlxMath.maxInt(FlxMath.maxInt(b_s[0] ?? pos, b_s[1] ?? pos), b_s[2] ?? pos), b_s[3] ?? pos);
-			c = nextChar(); --pos;
-			// trace(b_s[0].hex(8), b_s[1].hex(8), b_s[2].hex(8), b_s[3].hex(8), pos.hex(8), bracketMode, String.fromCharCode(c));
-			
-			if (bracketMode == 2) {
-				prepareSkipMode = skipMode = false; ++pos; comma = true;
-				#if debug trace('skipMode deactivated at $pos, $field'); #end
-				skipDone = true;
-			}
-			
-			if (pos > str.length) {
-				prepareSkipMode = skipMode = false;
-			} // emergency stop
-
-			if (skipDone) return [];
-			return parseRec(); // Recursive call instead of continue
-		}
-
-		switch (c) {
-			case ' '.code, '\r'.code, '\n'.code, '\t'.code:
-			// loop
-			case '{'.code:
+			switch (c) {
+				case ' '.code, '\r'.code, '\n'.code, '\t'.code:
+				// loop
+				case '{'.code:
 					obj[++objLayer] = {};
 					field = null;
 					comma = null;
@@ -178,7 +198,7 @@ class SongJson {
 						
 						skipMode = true;
 						#if debug trace('skipMode activated at $pos'); #end
-						return parseRec();
+						continue;
 					}
 					arr[++arrLayer] = [];
 					comma = null;
@@ -195,129 +215,229 @@ class SongJson {
 							case ','.code:
 								if (comma) comma = false else invalidChar();
 							default:
+								if (comma) invalidChar();
+								pos--;
 								arr[arrLayer].push(parseRec());
 								comma = true;
 						}
 					}
+				case 't'.code: // judge "true"
+					save = pos;
+					if (nextChar() != 'r'.code || nextChar() != 'u'.code || nextChar() != 'e'.code) {
+						pos = save;
+						invalidChar();
+					}
+					return true;
+				case 'f'.code: // judge "false"
+					save = pos;
+					if (nextChar() != 'a'.code || nextChar() != 'l'.code || nextChar() != 's'.code || nextChar() != 'e'.code) {
+						pos = save;
+						invalidChar();
+					}
+					return false;
+				case 'n'.code: // judge "null"
+					save = pos;
+					if (nextChar() != 'u'.code || nextChar() != 'l'.code || nextChar() != 'l'.code) {
+						pos = save;
+						invalidChar();
+					}
+					return null;
 				case '"'.code:
 					return parseString();
-				case 't'.code:
-					pos += 3; // "rue"
-					if (str.substr(pos - 3, 4) != "true")
-						invalidChar();
-					return true;
-				case 'f'.code:
-					pos += 4; // "alse"
-					if (str.substr(pos - 4, 5) != "false")
-						invalidChar();
-					return false;
-				case 'n'.code:
-					pos += 3; // "ull"
-					if (str.substr(pos - 3, 4) != "null")
-						invalidChar();
-					return null;
+				case '0'.code, '1'.code, '2'.code, '3'.code, '4'.code, '5'.code, '6'.code, '7'.code, '8'.code, '9'.code, '-'.code:
+					return parseNumber(c);
 				default:
-					if (c >= '0'.code && c <= '9'.code || c == '-'.code) {
-						pos--;
-						return parseNumber();
-					}
+					if (StringTools.isEof(c)) return returnObject;
 					invalidChar();
 			}
-		return null; // This should never be reached, but needed for compilation
+		}
 	}
 
-	function parseString():String {
-		var start = pos;
-		var buf = new StringBuf();
+	function showProgress() {
+		if (Timer.stamp() - time > 0.1) {
+			if (Main.isConsoleAvailable && log) Sys.stdout().writeString('\x1b[0G$pos/${str.length}');
+			time = Timer.stamp();
+		}
+	}
+
+	var start:Int;
+	var buf:StringBuf = null;
+	var prev:Int;
+	var uc:Int;
+	function parseString() {
+		start = pos;
+		buf = null;
+		#if target.unicode
+		prev = -1;
+		inline function cancelSurrogate() {
+			// invalid high surrogate (not followed by low surrogate)
+			buf.addChar(0xFFFD);
+			prev = -1;
+		}
+		#end
 		while (true) {
-			var c = nextChar();
-			switch (c) {
-				case '"'.code:
-					return buf.toString();
-				case '\\'.code:
-					buf.addSub(str, start, pos - start - 1);
-					c = nextChar();
-					switch (c) {
-						case 'r'.code: buf.addChar('\r'.code);
-						case 'n'.code: buf.addChar('\n'.code);
-						case 't'.code: buf.addChar('\t'.code);
-						case '\\'.code | '"'.code | '/'.code: buf.addChar(c);
-						case 'u'.code:
-							var uc = Std.parseInt('0x' + str.substr(pos, 4));
-							pos += 4;
-							if (uc <= 0x7F)
-								buf.addChar(uc);
-							else if (uc <= 0x7FF) {
-								buf.addChar(0xC0 | (uc >> 6));
-								buf.addChar(0x80 | (uc & 63));
-							} else {
-								buf.addChar(0xE0 | (uc >> 12));
-								buf.addChar(0x80 | ((uc >> 6) & 63));
-								buf.addChar(0x80 | (uc & 63));
-							}
-						default:
-							throw 'Invalid escape sequence \\' + String.fromCharCode(c) + ' at position $pos';
-					}
-					start = pos;
-				default:
-					if (StringTools.isEof(c))
-						throw 'Unclosed string at position $start';
-			}
-		}
-	}
-
-	function parseNumber():Float {
-		var start = pos;
-		var minus = false;
-		var digit = false;
-		if (c == '-'.code) {
-			minus = true;
 			c = nextChar();
-		}
-		if (c == '0'.code) {
-			digit = true;
-			c = nextChar();
-		} else if (c >= '1'.code && c <= '9'.code) {
-			digit = true;
-			do c = nextChar() while (c >= '0'.code && c <= '9'.code);
-		} else
-			invalidChar();
-		if (c == '.'.code) {
-			digit = true;
-			do c = nextChar() while (c >= '0'.code && c <= '9'.code);
-		}
-		if (c == 'e'.code || c == 'E'.code) {
-			c = nextChar();
-			if (c == '-'.code || c == '+'.code)
+			if (c == '"'.code)
+				break;
+			if (c == '\\'.code) {
+				if (buf == null) {
+					buf = new StringBuf();
+				}
+				buf.addSub(str, start, pos - start - 1);
 				c = nextChar();
-			if (c < '0'.code || c > '9'.code)
-				invalidChar();
-			do c = nextChar() while (c >= '0'.code && c <= '9'.code);
+				#if target.unicode
+				if (c != "u".code && prev != -1)
+					cancelSurrogate();
+				#end
+				switch (c) {
+					case "r".code:
+						buf.addChar("\r".code);
+					case "n".code:
+						buf.addChar("\n".code);
+					case "t".code:
+						buf.addChar("\t".code);
+					case "b".code:
+						buf.addChar(8);
+					case "f".code:
+						buf.addChar(12);
+					case "/".code, '\\'.code, '"'.code:
+						buf.addChar(c);
+					case 'u'.code:
+						uc = Std.parseInt("0x" + str.substr(pos, 4));
+						pos += 4;
+						#if !target.unicode
+						if (uc <= 0x7F)
+							buf.addChar(uc);
+						else if (uc <= 0x7FF) {
+							buf.addChar(0xC0 | (uc >> 6));
+							buf.addChar(0x80 | (uc & 63));
+						} else if (uc <= 0xFFFF) {
+							buf.addChar(0xE0 | (uc >> 12));
+							buf.addChar(0x80 | ((uc >> 6) & 63));
+							buf.addChar(0x80 | (uc & 63));
+						} else {
+							buf.addChar(0xF0 | (uc >> 18));
+							buf.addChar(0x80 | ((uc >> 12) & 63));
+							buf.addChar(0x80 | ((uc >> 6) & 63));
+							buf.addChar(0x80 | (uc & 63));
+						}
+						#else
+						if (prev != -1) {
+							if (uc < 0xDC00 || uc > 0xDFFF)
+								cancelSurrogate();
+							else {
+								buf.addChar(((prev - 0xD800) << 10) + (uc - 0xDC00) + 0x10000);
+								prev = -1;
+							}
+						} else if (uc >= 0xD800 && uc <= 0xDBFF)
+							prev = uc;
+						else
+							buf.addChar(uc);
+						#end
+					default:
+						throw "Invalid escape sequence \\" + String.fromCharCode(c) + " at position " + (pos - 1);
+				}
+				start = pos;
+			}
+			#if !(target.unicode)
+			// ensure utf8 chars are not cut
+			else if (c >= 0x80) {
+				pos++;
+				if (c >= 0xFC)
+					pos += 4;
+				else if (c >= 0xF8)
+					pos += 3;
+				else if (c >= 0xF0)
+					pos += 2;
+				else if (c >= 0xE0)
+					pos++;
+			}
+			#end
+			else if (StringTools.isEof(c))
+			throw "Unclosed string";
 		}
-		pos--;
-		if (!digit)
-			invalidChar();
-		return Std.parseFloat(str.substr(start, pos - start));
+		#if target.unicode
+		if (prev != -1)
+			cancelSurrogate();
+		#end
+		if (buf == null) {
+			return str.substr(start, pos - start - 1);
+		} else {
+			buf.addSub(str, start, pos - start - 1);
+			return buf.toString();
+		}
+	}
+	
+	var minus:Bool; var digit:Bool; var zero:Bool;
+	var point:Bool = false; var e:Bool = false;
+	var pm:Bool = false; var end:Bool = false;
+	var f:Float; var i:Int;
+	inline function parseNumber(c:Int):Dynamic {
+		start = pos - 1;
+		minus = c == '-'.code; digit = !minus; zero = c == '0'.code;
+		point = e = pm = end = false;
+		while (true) {
+			switch (c = nextChar()) {
+				case '0'.code:
+					if (zero && !point)
+						invalidNumber(start);
+					if (minus) {
+						minus = false;
+						zero = true;
+					}
+					digit = true;
+				case '1'.code, '2'.code, '3'.code, '4'.code, '5'.code, '6'.code, '7'.code, '8'.code, '9'.code:
+					if (zero && !point)
+						invalidNumber(start);
+					if (minus)
+						minus = false;
+					digit = true;
+					zero = false;
+				case '.'.code:
+					if (minus || point || e)
+						invalidNumber(start);
+					digit = false;
+					point = true;
+				case 'e'.code, 'E'.code:
+					if (minus || zero || e)
+						invalidNumber(start);
+					digit = false;
+					e = true;
+				case '+'.code, '-'.code:
+					if (!e || pm)
+						invalidNumber(start);
+					digit = false;
+					pm = true;
+				default:
+					if (!digit)
+						invalidNumber(start);
+					pos--;
+					end = true;
+			}
+			if (end)
+				break;
+		}
+
+		f = Std.parseFloat(str.substr(start, pos - start));
+		if(point) {
+			return f;
+		} else {
+			i = Std.int(f);
+			return if (i == f) i else f;
+		}
 	}
 
-	function nextChar():Int {
+	inline function nextChar() {
 		return StringTools.fastCodeAt(str, pos++);
 	}
 
 	function invalidChar() {
 		pos--; // rewind
-		var end = Math.min(pos + 20, str.length);
-		var start = Math.max(0, pos - 20);
-		var excerpt = str.substr(Std.int(start), Std.int(end - start));
-		throw 'Invalid char ' + String.fromCharCode(c) + ' at position $pos in \'$excerpt\'';
+		throw "Invalid char " + StringTools.fastCodeAt(str, pos) + " at position " + pos;
 	}
 
-	function showProgress() {
-		#if sys
-		if (log && pos % 10000 == 0) {
-			var progress = Math.floor((pos / str.length) * 100);
-			Sys.stdout().writeString('\x1b[0G$progress% ($pos/${str.length})');
-		}
-		#end
+	function invalidNumber(start:Int) {
+		throw "Invalid number at position " + start + ": " + str.substr(start, pos - start);
 	}
 }
+
