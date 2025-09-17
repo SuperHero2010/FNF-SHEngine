@@ -3174,7 +3174,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 				showOutput('Invalid section number! Must be between 0 and ${PlayState.SONG.notes.length - 1}', true);
 			}
 		});
-		jumpSectionButton.color = FlxColor.CYAN;
+		jumpSectionButton.normalStyle.bgColor = FlxColor.CYAN;
 		jumpSectionButton.normalStyle.textColor = FlxColor.WHITE;
 
 		tab_group.add(stepperSectionJump);
@@ -3479,14 +3479,14 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		{
 			stepperStackNum.value *= 2;
 		});
-		doubleSpamNum.color = FlxColor.GREEN;
+		doubleSpamNum.normalStyle.bgColor = FlxColor.GREEN;
 		doubleSpamNum.normalStyle.textColor = FlxColor.WHITE;
 
 		var halfSpamNum:PsychUIButton = new PsychUIButton(doubleSpamNum.x + doubleSpamNum.width + 20, doubleSpamNum.y, 'x0.5 Amount', function()
 		{
 			stepperStackNum.value /= 2;
 		});
-		halfSpamNum.color = FlxColor.RED;
+		halfSpamNum.normalStyle.bgColor = FlxColor.RED;
 		halfSpamNum.normalStyle.textColor = FlxColor.WHITE;
 
 		stepperStackOffset = new PsychUINumericStepper(objX, objY + 80, 1, 1, 0, 999999, 4);
@@ -3496,14 +3496,14 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		{
 			stepperStackOffset.value *= 2;
 		});
-		doubleSpamMult.color = FlxColor.GREEN;
+		doubleSpamMult.normalStyle.bgColor = FlxColor.GREEN;
 		doubleSpamMult.normalStyle.textColor = FlxColor.WHITE;
 
 		var halfSpamMult:PsychUIButton = new PsychUIButton(doubleSpamMult.x + doubleSpamMult.width + 20, doubleSpamMult.y, 'x0.5 SM', function()
 		{
 			stepperStackOffset.value /= 2;
 		});
-		halfSpamMult.color = FlxColor.RED;
+		halfSpamMult.normalStyle.bgColor = FlxColor.RED;
 		halfSpamMult.normalStyle.textColor = FlxColor.WHITE;
 
 		stepperStackSideOffset = new PsychUINumericStepper(objX, objY + 140, 1, 0, -9999, 9999);
