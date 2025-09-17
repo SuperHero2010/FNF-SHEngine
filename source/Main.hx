@@ -49,6 +49,11 @@ import backend.Highscore;
 // // // // // // // // //
 class Main extends Sprite
 {
+    #if sys
+    public static var isConsoleAvailable:Bool = true;
+    #else
+    public static var isConsoleAvailable:Bool = false;
+    #end
 	public static final game = {
 		width: 1280, // WINDOW width
 		height: 720, // WINDOW height
