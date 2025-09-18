@@ -2048,10 +2048,6 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		}
 	}
 
-	// Raw note data storage for lazy loading
-	var rawNotesData:Array<Dynamic> = [];
-	var rawEventsData:Array<Dynamic> = [];
-	
 	function reloadNotes()
 	{
 		selectedNotes = [];
@@ -2059,93 +2055,23 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		for (event in events) if(event != null) event.destroy();
 		notes = [];
 		events = [];
-		rawNotesData = [];
-		rawEventsData = [];
 		undoActions = [];
 
-		// Store raw note data instead of creating note objects immediately
 		for (secNum => section in PlayState.SONG.notes)
 			for (note in section.sectionNotes)
 				if(note != null)
-					rawNotesData.push({note: note, secNum: secNum});
+					notes.push(createNote(note, secNum));
 
 		for (eventNum => event in PlayState.SONG.events)
 			if(event != null && (cachedSectionTimes.length < 1 || event[0] < cachedSectionTimes[cachedSectionTimes.length-1])) //dont spawn events over the time limit
-				rawEventsData.push(event);
+				events.push(createEvent(event));
 
-		// Sort raw data by time for efficient section-based loading
-		rawNotesData.sort(function(a, b) {
-			return FlxSort.byValues(FlxSort.ASCENDING, a.note[0], b.note[0]);
-		});
-		rawEventsData.sort(function(a, b) {
-			return FlxSort.byValues(FlxSort.ASCENDING, a[0], b[0]);
-		});
-
-		trace('Raw note count: ${rawNotesData.length}');
-		trace('Raw events count: ${rawEventsData.length}');
-		loadSection();
-	}
-
-	// Lazy loading helper functions
-	function createNotesForSection(minTime:Float, maxTime:Float)
-	{
-		// Create notes for current section from raw data without removing existing notes
-		for (rawData in rawNotesData)
-		{
-			var noteTime:Float = rawData.note[0];
-			if (noteTime >= minTime && noteTime < maxTime)
-			{
-				// Check if note already exists
-				var noteExists:Bool = false;
-				for (existingNote in notes)
-				{
-					if (existingNote != null && existingNote.strumTime == noteTime && 
-						existingNote.songData[1] == rawData.note[1])
-					{
-						noteExists = true;
-						break;
-					}
-				}
-				
-				if (!noteExists)
-				{
-					var newNote = createNote(rawData.note, rawData.secNum);
-					notes.push(newNote);
-				}
-			}
-		}
-		
 		notes.sort(PlayState.sortByTime);
-	}
-	
-	function createEventsForSection(minTime:Float, maxTime:Float)
-	{
-		// Create events for current section from raw data without removing existing events
-		for (rawEvent in rawEventsData)
-		{
-			var eventTime:Float = rawEvent[0];
-			if (eventTime >= minTime && eventTime < maxTime)
-			{
-				// Check if event already exists
-				var eventExists:Bool = false;
-				for (existingEvent in events)
-				{
-					if (existingEvent != null && existingEvent.strumTime == eventTime)
-					{
-						eventExists = true;
-						break;
-					}
-				}
-				
-				if (!eventExists)
-				{
-					var newEvent = createEvent(rawEvent);
-					events.push(newEvent);
-				}
-			}
-		}
-		
 		events.sort(PlayState.sortByTime);
+
+		trace('Note count: ${notes.length}');
+		trace('Events count: ${events.length}');
+		loadSection();
 	}
 
 	function createNote(note:Dynamic, ?secNum:Null<Int> = null)
@@ -2377,10 +2303,6 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 		var minTime:Float = getMinNoteTime(curSec);
 		var maxTime:Float = getMaxNoteTime(curSec);
-		
-		// Create note objects on-demand for current section
-		createNotesForSection(minTime, maxTime);
-		
 		function curSecFilter(note:MetaNote)
 		{
 			return (note.strumTime >= minTime && note.strumTime < maxTime);
@@ -2403,9 +2325,6 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 		if(SHOW_EVENT_COLUMN)
 		{
-			// Create event objects on-demand for current section
-			createEventsForSection(minTime, maxTime);
-			
 			for (num => event in events)
 			{
 				if(event != null && curSecFilter(event))
@@ -4854,49 +4773,31 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		for (secNum => section in PlayState.SONG.notes)
 			PlayState.SONG.notes[secNum].sectionNotes = [];
 
-		// Update raw notes data from current notes array
-		rawNotesData = [];
-		for (note in notes)
-		{
-			if(note != null)
-			{
-				// Find which section this note belongs to
-				var noteSec:Int = 0;
-				while(noteSec < cachedSectionTimes.length - 1 && cachedSectionTimes[noteSec + 1] <= note.strumTime)
-					noteSec++;
-				
-				rawNotesData.push({note: note.songData, secNum: noteSec});
-			}
-		}
-		
-		// Sort and assign to sections
-		rawNotesData.sort(function(a, b) {
-			return FlxSort.byValues(FlxSort.ASCENDING, a.note[0], b.note[0]);
-		});
-		
+		notes.sort(PlayState.sortByTime);
 		var noteSec:Int = 0;
-		for (rawData in rawNotesData)
+		var nextSectionTime:Float = cachedSectionTimes[noteSec + 1];
+		var curSectionTime:Float = cachedSectionTimes[noteSec];
+
+		for (num => note in notes)
 		{
-			while(noteSec < cachedSectionTimes.length - 1 && cachedSectionTimes[noteSec + 1] <= rawData.note[0])
+			if(note == null) continue;
+
+			while(cachedSectionTimes[noteSec + 1] <= note.strumTime)
+			{
 				noteSec++;
-			
+				nextSectionTime = cachedSectionTimes[noteSec + 1];
+				curSectionTime = cachedSectionTimes[noteSec];
+			}
+
 			var arr:Array<Dynamic> = PlayState.SONG.notes[noteSec].sectionNotes;
-			arr.push(rawData.note);
+			//trace('Added note with time ${note.songData[0]} at section $noteSec');
+			arr.push(note.songData);
 		}
 
-		// Update raw events data from current events array
-		rawEventsData = [];
+		events.sort(PlayState.sortByTime);
+		PlayState.SONG.events = [];
 		for (event in events)
-		{
-			if(event != null)
-				rawEventsData.push(event.songData);
-		}
-		
-		rawEventsData.sort(function(a, b) {
-			return FlxSort.byValues(FlxSort.ASCENDING, a[0], b[0]);
-		});
-		
-		PlayState.SONG.events = rawEventsData;
+			PlayState.SONG.events.push(event.songData);
 	}
 
 	function saveChart(canQuickSave:Bool = true)
@@ -4957,17 +4858,17 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	}
 
 	function updateGridVisibility()
-{
-	showLastGridButton.text.text = showPreviousSection	? '  Hide Last Section' :  '  Show Last Section';
-	showNextGridButton.text.text = showNextSection		? '  Hide Next Section' :  '  Show Next Section';
+	{
+		showLastGridButton.text.text = showPreviousSection	? '  Hide Last Section' :  '  Show Last Section';
+		showNextGridButton.text.text = showNextSection		? '  Hide Next Section' :  '  Show Next Section';
 
-	prevGridBg.visible = (curSec > 0 && showPreviousSection);
-	nextGridBg.visible = (curSec < PlayState.SONG.notes.length - 1 && showNextSection);
-	
-	noteTypeLabelsButton.text.text = showNoteTypeLabels ? '  Hide Note Labels' : '  Show Note Labels';
-	for (num => text in MetaNote.noteTypeTexts)
-		text.visible = showNoteTypeLabels;
-	softReloadNotes();
+		prevGridBg.visible = (curSec > 0 && showPreviousSection);
+		nextGridBg.visible = (curSec < PlayState.SONG.notes.length - 1 && showNextSection);
+		
+		noteTypeLabelsButton.text.text = showNoteTypeLabels ? '  Hide Note Labels' : '  Show Note Labels';
+		for (num => text in MetaNote.noteTypeTexts)
+			text.visible = showNoteTypeLabels;
+		softReloadNotes();
 	}
 
 	function adaptNotesToNewTimes(oldTimes:Array<Float>)

@@ -56,13 +56,11 @@ class SongJson {
 	var time:Float = Timer.stamp();
 	public static var skipChart:Bool = false;
 	public static var log:Bool = true;
-	var chunkSize:Int; // Field declaration for chunk size
 
 	function new(str:String) {
 		this.str = str;
 		this.pos = 0;
 		this.bracketMode = 0;
-		this.chunkSize = 10000; // Define chunk size for memory management
 	}
 
 	var prepareSkipMode:Bool = false;
@@ -103,13 +101,6 @@ class SongJson {
 	var returnObject:Array<Dynamic> = [];
 
 	function parseRec():Dynamic {
-		// Periodically collect garbage for large charts
-		if (pos % chunkSize == 0 && str.length > 100000) {
-			#if !js
-			MemoryUtil.collect(false);
-			#end
-		}
-		
 		while (true) {
 			if(obj[objLayer + 1] != null) obj[objLayer + 1] == null;
 			if(arr[arrLayer + 1] != null) arr[arrLayer + 1] == null;
@@ -117,21 +108,10 @@ class SongJson {
 			if (skipMode) {
 				showProgress();
 
-				// Optimize bracket search for large files
-				if (str.length > 100000) {
-					// Search in smaller chunks for better performance
-					var endPos = Math.min(pos + 5000, str.length);
-					for (i in 0...b_s.length) {
-						b_p[i] = b_s[i] ?? str.indexOf(skipPattern.charAt(i), pos - 1);
-						b_s[i] = str.indexOf(skipPattern.charAt(i), pos);
-						if (b_s[i] == -1) b_s[i] = null;
-					}
-				} else {
-					for (i in 0...b_s.length) {
-						b_p[i] = b_s[i] ?? str.indexOf(skipPattern.charAt(i), pos - 1);
-						b_s[i] = str.indexOf(skipPattern.charAt(i), pos);
-						if (b_s[i] == -1) b_s[i] = null;
-					}
+				for (i in 0...b_s.length) {
+					b_p[i] = b_s[i] ?? str.indexOf(skipPattern.charAt(i), pos - 1);
+					b_s[i] = str.indexOf(skipPattern.charAt(i), pos);
+					if (b_s[i] == -1) b_s[i] = null;
 				}
 
 				if (b_s[2] < b_s[3]) {

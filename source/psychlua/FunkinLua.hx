@@ -380,14 +380,8 @@ class FunkinLua {
 			if (difficultyNum == -1)
 				difficultyNum = PlayState.storyDifficulty;
 
-			// Memory management for large charts
-			if (ClientPrefs.data.disableGC) {
-				MemoryUtil.enable();
-				MemoryUtil.collect(true);
-			}
-
 			var poop = Highscore.formatSong(name, difficultyNum);
-			Song.loadFromJson(poop, true, name);
+			Song.loadFromJson(poop, false, name);
 			PlayState.storyDifficulty = difficultyNum;
 			FlxG.state.persistentUpdate = false;
 			LoadingState.loadAndSwitchState(new PlayState());
