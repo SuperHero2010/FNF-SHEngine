@@ -2048,6 +2048,10 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		}
 	}
 
+	// Raw note data storage for lazy loading
+	var rawNotesData:Array<Dynamic> = [];
+	var rawEventsData:Array<Dynamic> = [];
+	
 	function reloadNotes()
 	{
 		selectedNotes = [];
@@ -2055,23 +2059,123 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		for (event in events) if(event != null) event.destroy();
 		notes = [];
 		events = [];
+		rawNotesData = [];
+		rawEventsData = [];
 		undoActions = [];
 
+		// Store raw note data instead of creating note objects immediately
 		for (secNum => section in PlayState.SONG.notes)
 			for (note in section.sectionNotes)
 				if(note != null)
-					notes.push(createNote(note, secNum));
+					rawNotesData.push({note: note, secNum: secNum});
 
 		for (eventNum => event in PlayState.SONG.events)
 			if(event != null && (cachedSectionTimes.length < 1 || event[0] < cachedSectionTimes[cachedSectionTimes.length-1])) //dont spawn events over the time limit
-				events.push(createEvent(event));
+				rawEventsData.push(event);
 
-		notes.sort(PlayState.sortByTime);
-		events.sort(PlayState.sortByTime);
+		// Sort raw data by time for efficient section-based loading
+		rawNotesData.sort(function(a, b) {
+			return FlxSort.byValues(FlxSort.ASCENDING, a.note[0], b.note[0]);
+		});
+		rawEventsData.sort(function(a, b) {
+			return FlxSort.byValues(FlxSort.ASCENDING, a[0], b[0]);
+		});
 
-		trace('Note count: ${notes.length}');
-		trace('Events count: ${events.length}');
+		trace('Raw note count: ${rawNotesData.length}');
+		trace('Raw events count: ${rawEventsData.length}');
 		loadSection();
+	}
+
+	// Lazy loading helper functions
+	function createNotesForSection(minTime:Float, maxTime:Float)
+	{
+		// Remove existing notes outside current section to free memory
+		var notesToRemove:Array<MetaNote> = [];
+		for (note in notes)
+		{
+			if (note != null && (note.strumTime < minTime || note.strumTime >= maxTime))
+			{
+				notesToRemove.push(note);
+			}
+		}
+		for (note in notesToRemove)
+		{
+			notes.remove(note);
+			note.destroy();
+		}
+		
+		// Create notes for current section from raw data
+		for (rawData in rawNotesData)
+		{
+			var noteTime:Float = rawData.note[0];
+			if (noteTime >= minTime && noteTime < maxTime)
+			{
+				// Check if note already exists
+				var noteExists:Bool = false;
+				for (existingNote in notes)
+				{
+					if (existingNote != null && existingNote.strumTime == noteTime && 
+						existingNote.songData[1] == rawData.note[1])
+					{
+						noteExists = true;
+						break;
+					}
+				}
+				
+				if (!noteExists)
+				{
+					var newNote = createNote(rawData.note, rawData.secNum);
+					notes.push(newNote);
+				}
+			}
+		}
+		
+		notes.sort(PlayState.sortByTime);
+	}
+	
+	function createEventsForSection(minTime:Float, maxTime:Float)
+	{
+		// Remove existing events outside current section to free memory
+		var eventsToRemove:Array<EventMetaNote> = [];
+		for (event in events)
+		{
+			if (event != null && (event.strumTime < minTime || event.strumTime >= maxTime))
+			{
+				eventsToRemove.push(event);
+			}
+		}
+		for (event in eventsToRemove)
+		{
+			events.remove(event);
+			event.destroy();
+		}
+		
+		// Create events for current section from raw data
+		for (rawEvent in rawEventsData)
+		{
+			var eventTime:Float = rawEvent[0];
+			if (eventTime >= minTime && eventTime < maxTime)
+			{
+				// Check if event already exists
+				var eventExists:Bool = false;
+				for (existingEvent in events)
+				{
+					if (existingEvent != null && existingEvent.strumTime == eventTime)
+					{
+						eventExists = true;
+						break;
+					}
+				}
+				
+				if (!eventExists)
+				{
+					var newEvent = createEvent(rawEvent);
+					events.push(newEvent);
+				}
+			}
+		}
+		
+		events.sort(PlayState.sortByTime);
 	}
 
 	function createNote(note:Dynamic, ?secNum:Null<Int> = null)
@@ -2303,6 +2407,10 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 		var minTime:Float = getMinNoteTime(curSec);
 		var maxTime:Float = getMaxNoteTime(curSec);
+		
+		// Create note objects on-demand for current section
+		createNotesForSection(minTime, maxTime);
+		
 		function curSecFilter(note:MetaNote)
 		{
 			return (note.strumTime >= minTime && note.strumTime < maxTime);
@@ -2325,6 +2433,9 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 		if(SHOW_EVENT_COLUMN)
 		{
+			// Create event objects on-demand for current section
+			createEventsForSection(minTime, maxTime);
+			
 			for (num => event in events)
 			{
 				if(event != null && curSecFilter(event))
@@ -4773,31 +4884,49 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		for (secNum => section in PlayState.SONG.notes)
 			PlayState.SONG.notes[secNum].sectionNotes = [];
 
-		notes.sort(PlayState.sortByTime);
-		var noteSec:Int = 0;
-		var nextSectionTime:Float = cachedSectionTimes[noteSec + 1];
-		var curSectionTime:Float = cachedSectionTimes[noteSec];
-
-		for (num => note in notes)
+		// Update raw notes data from current notes array
+		rawNotesData = [];
+		for (note in notes)
 		{
-			if(note == null) continue;
-
-			while(cachedSectionTimes[noteSec + 1] <= note.strumTime)
+			if(note != null)
 			{
-				noteSec++;
-				nextSectionTime = cachedSectionTimes[noteSec + 1];
-				curSectionTime = cachedSectionTimes[noteSec];
+				// Find which section this note belongs to
+				var noteSec:Int = 0;
+				while(noteSec < cachedSectionTimes.length - 1 && cachedSectionTimes[noteSec + 1] <= note.strumTime)
+					noteSec++;
+				
+				rawNotesData.push({note: note.songData, secNum: noteSec});
 			}
-
+		}
+		
+		// Sort and assign to sections
+		rawNotesData.sort(function(a, b) {
+			return FlxSort.byValues(FlxSort.ASCENDING, a.note[0], b.note[0]);
+		});
+		
+		var noteSec:Int = 0;
+		for (rawData in rawNotesData)
+		{
+			while(noteSec < cachedSectionTimes.length - 1 && cachedSectionTimes[noteSec + 1] <= rawData.note[0])
+				noteSec++;
+			
 			var arr:Array<Dynamic> = PlayState.SONG.notes[noteSec].sectionNotes;
-			//trace('Added note with time ${note.songData[0]} at section $noteSec');
-			arr.push(note.songData);
+			arr.push(rawData.note);
 		}
 
-		events.sort(PlayState.sortByTime);
-		PlayState.SONG.events = [];
+		// Update raw events data from current events array
+		rawEventsData = [];
 		for (event in events)
-			PlayState.SONG.events.push(event.songData);
+		{
+			if(event != null)
+				rawEventsData.push(event.songData);
+		}
+		
+		rawEventsData.sort(function(a, b) {
+			return FlxSort.byValues(FlxSort.ASCENDING, a[0], b[0]);
+		});
+		
+		PlayState.SONG.events = rawEventsData;
 	}
 
 	function saveChart(canQuickSave:Bool = true)
