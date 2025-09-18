@@ -56,6 +56,7 @@ class SongJson {
 	var time:Float = Timer.stamp();
 	public static var skipChart:Bool = false;
 	public static var log:Bool = true;
+	var chunkSize:Int; // Field declaration for chunk size
 
 	function new(str:String) {
 		this.str = str;
