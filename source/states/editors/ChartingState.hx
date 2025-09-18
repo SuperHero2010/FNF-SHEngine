@@ -4987,17 +4987,17 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	}
 
 	function updateGridVisibility()
-	{
-		showLastGridButton.text.text = showPreviousSection	? '  Hide Last Section' :  '  Show Last Section';
-		showNextGridButton.text.text = showNextSection		? '  Hide Next Section' :  '  Show Next Section';
+{
+	showLastGridButton.text.text = showPreviousSection	? '  Hide Last Section' :  '  Show Last Section';
+	showNextGridButton.text.text = showNextSection		? '  Hide Next Section' :  '  Show Next Section';
 
-		prevGridBg.visible = (curSec > 0 && showPreviousSection);
-		nextGridBg.visible = (curSec < PlayState.SONG.notes.length - 1 && showNextSection);
-		
-		noteTypeLabelsButton.text.text = showNoteTypeLabels ? '  Hide Note Labels' : '  Show Note Labels';
-		for (num => text in MetaNote.noteTypeTexts)
-			text.visible = showNoteTypeLabels;
-		softReloadNotes();
+	prevGridBg.visible = (curSec > 0 && showPreviousSection);
+	nextGridBg.visible = (curSec < PlayState.SONG.notes.length - 1 && showNextSection);
+	
+	noteTypeLabelsButton.text.text = showNoteTypeLabels ? '  Hide Note Labels' : '  Show Note Labels';
+	for (num => text in MetaNote.noteTypeTexts)
+		text.visible = showNoteTypeLabels;
+	softReloadNotes();
 	}
 
 	function adaptNotesToNewTimes(oldTimes:Array<Float>)

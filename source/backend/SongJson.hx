@@ -108,6 +108,19 @@ class SongJson {
 			if (skipMode) {
 				showProgress();
 
+				// Optimized skipping for large charts
+				if (field == "notes" && str.length > 500000) {
+					// Fast skip for very large charts (500K+ notes)
+					var endBracket = str.indexOf("]", pos);
+					if (endBracket != -1) {
+						pos = endBracket + 1;
+						prepareSkipMode = skipMode = false;
+						comma = true;
+						skipDone = true;
+						return [];
+					}
+				}
+
 				for (i in 0...b_s.length) {
 					b_p[i] = b_s[i] ?? str.indexOf(skipPattern.charAt(i), pos - 1);
 					b_s[i] = str.indexOf(skipPattern.charAt(i), pos);
