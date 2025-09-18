@@ -15,18 +15,7 @@ class MetaNote extends Note
 
 	public function new(time:Float, data:Int, songData:Array<Dynamic>)
 	{
-		super();
-
-		tempCast = {
-			strumTime: time,
-			noteData: data,
-			noteType: "",
-			holdLength: 0,
-			noteSkin: "" 
-		}
-
-		recycleNote(tempCast);
-		inEditor = true;
+		super(time, data, null, false, true);
 
 		this.songData = songData;
 		this.strumTime = time;
