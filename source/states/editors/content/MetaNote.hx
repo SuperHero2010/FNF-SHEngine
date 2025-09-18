@@ -15,11 +15,22 @@ class MetaNote extends Note
 
 	public function new(time:Float, data:Int, songData:Array<Dynamic>)
 	{
-		super(time, data, null, false, true);
+		super();
+
+		tempCast = {
+			strumTime: time,
+			noteData: data,
+			noteType: "",
+			holdLength: 0,
+			noteSkin: "" 
+		}
+
+		recycleNote(tempCast);
+		inEditor = true;
+
 		this.songData = songData;
 		this.strumTime = time;
 		this.chartNoteData = data;
-		this.events = []; // Initialize events array for regular notes
 	}
 
 	public function changeNoteData(v:Int)
@@ -141,9 +152,9 @@ class EventMetaNote extends MetaNote
 	public var eventText:FlxText;
 	public function new(time:Float, eventData:Dynamic)
 	{
-		super(time, -1, []);
+		super(time, -1, eventData);
 		this.isEvent = true;
-		events = (eventData != null && Std.isOfType(eventData, Array) && cast(eventData, Array<Dynamic>).length > 1) ? cast(eventData, Array<Dynamic>)[1] : [];
+		events = eventData[1];
 		//trace('events: $events');
 		
 		loadGraphic(Paths.image('editors/eventIcon'));
@@ -153,6 +164,7 @@ class EventMetaNote extends MetaNote
 		eventText = new FlxText(0, 0, 400, '', 12);
 		eventText.setFormat(Paths.font('vcr.ttf'), 12, FlxColor.WHITE, RIGHT);
 		eventText.scrollFactor.x = 0;
+		eventText.antialiasing = ClientPrefs.data.antialiasing;
 		updateEventText();
 	}
 	
@@ -173,12 +185,12 @@ class EventMetaNote extends MetaNote
 	public function updateEventText()
 	{
 		var myTime:Float = Math.floor(this.strumTime);
-		if(events != null && events.length == 1)
+		if(events.length == 1)
 		{
 			var event = events[0];
 			eventText.text = 'Event: ${event[0]} ($myTime ms)\nValue 1: ${event[1]}\nValue 2: ${event[2]}';
 		}
-		else if(events != null && events.length > 1)
+		else if(events.length > 1)
 		{
 			var eventNames:Array<String> = [for (event in events) event[0]];
 			eventText.text = '${events.length} Events ($myTime ms):\n${eventNames.join(', ')}';
