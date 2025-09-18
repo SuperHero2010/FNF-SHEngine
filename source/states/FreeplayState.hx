@@ -337,7 +337,7 @@ class FreeplayState extends MusicBeatState
 
 				Mods.currentModDirectory = songs[curSelected].folder;
 				var poop:String = Highscore.formatSong(songs[curSelected].songName.toLowerCase(), curDifficulty);
-				Song.loadFromJson(poop, songs[curSelected].songName.toLowerCase());
+				Song.loadFromJson(poop, true, songs[curSelected].songName.toLowerCase());
 				if (PlayState.SONG.needsVoices)
 				{
 					vocals = new FlxSound();

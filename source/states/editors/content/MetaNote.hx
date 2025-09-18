@@ -19,6 +19,7 @@ class MetaNote extends Note
 		this.songData = songData;
 		this.strumTime = time;
 		this.chartNoteData = data;
+		this.events = []; // Initialize events array for regular notes
 	}
 
 	public function changeNoteData(v:Int)
@@ -140,9 +141,9 @@ class EventMetaNote extends MetaNote
 	public var eventText:FlxText;
 	public function new(time:Float, eventData:Dynamic)
 	{
-		super(time, -1, eventData);
+		super(time, -1, []);
 		this.isEvent = true;
-		events = eventData[1];
+		events = (eventData != null && Std.isOfType(eventData, Array) && cast(eventData, Array<Dynamic>).length > 1) ? cast(eventData, Array<Dynamic>)[1] : [];
 		//trace('events: $events');
 		
 		loadGraphic(Paths.image('editors/eventIcon'));
@@ -172,12 +173,12 @@ class EventMetaNote extends MetaNote
 	public function updateEventText()
 	{
 		var myTime:Float = Math.floor(this.strumTime);
-		if(events.length == 1)
+		if(events != null && events.length == 1)
 		{
 			var event = events[0];
 			eventText.text = 'Event: ${event[0]} ($myTime ms)\nValue 1: ${event[1]}\nValue 2: ${event[2]}';
 		}
-		else if(events.length > 1)
+		else if(events != null && events.length > 1)
 		{
 			var eventNames:Array<String> = [for (event in events) event[0]];
 			eventText.text = '${events.length} Events ($myTime ms):\n${eventNames.join(', ')}';
