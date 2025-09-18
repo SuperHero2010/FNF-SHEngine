@@ -2089,22 +2089,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	// Lazy loading helper functions
 	function createNotesForSection(minTime:Float, maxTime:Float)
 	{
-		// Remove existing notes outside current section to free memory
-		var notesToRemove:Array<MetaNote> = [];
-		for (note in notes)
-		{
-			if (note != null && (note.strumTime < minTime || note.strumTime >= maxTime))
-			{
-				notesToRemove.push(note);
-			}
-		}
-		for (note in notesToRemove)
-		{
-			notes.remove(note);
-			note.destroy();
-		}
-		
-		// Create notes for current section from raw data
+		// Create notes for current section from raw data without removing existing notes
 		for (rawData in rawNotesData)
 		{
 			var noteTime:Float = rawData.note[0];
@@ -2135,22 +2120,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	
 	function createEventsForSection(minTime:Float, maxTime:Float)
 	{
-		// Remove existing events outside current section to free memory
-		var eventsToRemove:Array<EventMetaNote> = [];
-		for (event in events)
-		{
-			if (event != null && (event.strumTime < minTime || event.strumTime >= maxTime))
-			{
-				eventsToRemove.push(event);
-			}
-		}
-		for (event in eventsToRemove)
-		{
-			events.remove(event);
-			event.destroy();
-		}
-		
-		// Create events for current section from raw data
+		// Create events for current section from raw data without removing existing events
 		for (rawEvent in rawEventsData)
 		{
 			var eventTime:Float = rawEvent[0];

@@ -101,6 +101,13 @@ class SongJson {
 	var returnObject:Array<Dynamic> = [];
 
 	function parseRec():Dynamic {
+		// Periodically collect garbage for large charts
+		if (pos % chunkSize == 0 && str.length > 100000) {
+			#if !js
+			MemoryUtil.collect(false);
+			#end
+		}
+		
 		while (true) {
 			if(obj[objLayer + 1] != null) obj[objLayer + 1] == null;
 			if(arr[arrLayer + 1] != null) arr[arrLayer + 1] == null;
@@ -108,23 +115,21 @@ class SongJson {
 			if (skipMode) {
 				showProgress();
 
-				// Optimized skipping for large charts
-				if (field == "notes" && str.length > 500000) {
-					// Fast skip for very large charts (500K+ notes)
-					var endBracket = str.indexOf("]", pos);
-					if (endBracket != -1) {
-						pos = endBracket + 1;
-						prepareSkipMode = skipMode = false;
-						comma = true;
-						skipDone = true;
-						return [];
+				// Optimize bracket search for large files
+				if (str.length > 100000) {
+					// Search in smaller chunks for better performance
+					var endPos = Math.min(pos + 5000, str.length);
+					for (i in 0...b_s.length) {
+						b_p[i] = b_s[i] ?? str.indexOf(skipPattern.charAt(i), pos - 1);
+						b_s[i] = str.indexOf(skipPattern.charAt(i), pos, endPos);
+						if (b_s[i] == -1) b_s[i] = null;
 					}
-				}
-
-				for (i in 0...b_s.length) {
-					b_p[i] = b_s[i] ?? str.indexOf(skipPattern.charAt(i), pos - 1);
-					b_s[i] = str.indexOf(skipPattern.charAt(i), pos);
-					if (b_s[i] == -1) b_s[i] = null;
+				} else {
+					for (i in 0...b_s.length) {
+						b_p[i] = b_s[i] ?? str.indexOf(skipPattern.charAt(i), pos - 1);
+						b_s[i] = str.indexOf(skipPattern.charAt(i), pos);
+						if (b_s[i] == -1) b_s[i] = null;
+					}
 				}
 
 				if (b_s[2] < b_s[3]) {

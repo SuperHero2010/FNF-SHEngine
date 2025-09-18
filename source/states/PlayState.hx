@@ -1274,6 +1274,12 @@ class PlayState extends MusicBeatState
 
 	private function generateSong():Void
 	{
+		// Memory management for large charts
+		if (ClientPrefs.data.disableGC) {
+			MemoryUtil.enable();
+			MemoryUtil.collect(true);
+		}
+		
 		// FlxG.log.add(ChartParser.parse());
 		songSpeed = PlayState.SONG.speed;
 		songSpeedType = ClientPrefs.getGameplaySetting('scrolltype');

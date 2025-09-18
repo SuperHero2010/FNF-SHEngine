@@ -310,6 +310,12 @@ class StoryMenuState extends MusicBeatState
 			// Nevermind that's stupid lmao
 			try
 			{
+				// Memory management for large charts
+				if (ClientPrefs.data.disableGC) {
+					MemoryUtil.enable();
+					MemoryUtil.collect(true);
+				}
+				
 				PlayState.storyPlaylist = songArray;
 				PlayState.isStoryMode = true;
 				selectedWeek = true;
@@ -319,12 +325,18 @@ class StoryMenuState extends MusicBeatState
 	
 				PlayState.storyDifficulty = curDifficulty;
 	
-				Song.loadFromJson(PlayState.storyPlaylist[0].toLowerCase() + diffic, false, PlayState.storyPlaylist[0].toLowerCase());
+				Song.loadFromJson(PlayState.storyPlaylist[0].toLowerCase() + diffic, true, PlayState.storyPlaylist[0].toLowerCase());
 				PlayState.campaignScore = 0;
 				PlayState.campaignMisses = 0;
 			}
 			catch(e:Dynamic)
 			{
+				// Clean up memory if error occurs
+				if (ClientPrefs.data.disableGC) {
+					MemoryUtil.enable();
+					MemoryUtil.collect(true);
+				}
+				
 				trace('ERROR! $e');
 				return;
 			}

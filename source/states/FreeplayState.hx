@@ -415,12 +415,13 @@ class FreeplayState extends MusicBeatState
 				if (ClientPrefs.data.disableGC) {
 					MemoryUtil.enable();
 					MemoryUtil.collect(true);
-					MemoryUtil.disable();
 				}
 
-				Song.loadFromJson(poop, false, songLowercase);
+				Song.loadFromJson(poop, true, songLowercase);
 				PlayState.isStoryMode = false;
 				PlayState.storyDifficulty = curDifficulty;
+				PlayState.campaignScore = 0;
+				PlayState.campaignMisses = 0;
 
 				trace('CURRENT WEEK: ' + WeekData.getWeekFileName());
 			}
@@ -457,6 +458,11 @@ class FreeplayState extends MusicBeatState
 				Paths.freeGraphicsFromMemory();
 			}
 			LoadingState.prepareToSong();
+			// Clean up memory before switching state
+			if (ClientPrefs.data.disableGC) {
+				MemoryUtil.collect(true);
+				MemoryUtil.disable();
+			}
 			LoadingState.loadAndSwitchState(new PlayState());
 			#if !SHOW_LOADING_SCREEN FlxG.sound.music.stop(); #end
 			stopMusicPlay = true;
