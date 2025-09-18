@@ -61,6 +61,7 @@ class SongJson {
 		this.str = str;
 		this.pos = 0;
 		this.bracketMode = 0;
+		this.chunkSize = 10000; // Define chunk size for memory management
 	}
 
 	var prepareSkipMode:Bool = false;
@@ -121,7 +122,7 @@ class SongJson {
 					var endPos = Math.min(pos + 5000, str.length);
 					for (i in 0...b_s.length) {
 						b_p[i] = b_s[i] ?? str.indexOf(skipPattern.charAt(i), pos - 1);
-						b_s[i] = str.indexOf(skipPattern.charAt(i), pos, endPos);
+						b_s[i] = str.indexOf(skipPattern.charAt(i), pos);
 						if (b_s[i] == -1) b_s[i] = null;
 					}
 				} else {
